@@ -8,6 +8,8 @@
 #define INPUT_DELIMS " \t\r\n"
 #define errorm "‫‪ERROR\n‬‬"
 #define maxStars 20
+#define roundFator 1000
+#define epsilon 0.00000001
 
 int checkValid(int d) {
     /*
@@ -55,6 +57,9 @@ double stof(const char *s, int len, int commas) {
 }
 
 double getLine(char *line) {
+    /*
+     * gets a new line
+     */
     if (fgets(line, LINE_MAX_SIZE, stdin) == NULL) {
         fprintf(stderr, "No input\n");
         return -1;
@@ -137,12 +142,15 @@ double sumArray(double * array){
      * return the sum of an array at len of a Max Line
      */
     double sum =0 ;
-    for (int i=0;i<=LINE_MAX_SIZE;i++){
+    for (int i=0;i<LINE_MAX_SIZE;i++){
         sum+=array[i];
     }
     return sum;
 }
 void normArray(double *array){
+    /*
+     * normalized an array
+     */
     double  sum = sumArray(array);
     for (int i=0;i<LINE_MAX_SIZE;i++){
         array[i]=array[i]/sum;
@@ -150,6 +158,9 @@ void normArray(double *array){
 }
 
 void centralizedArray(double *array ,int numArgs) {
+    /*
+     * centralized and normalized an array
+     */
     if (numArgs==LINE_MAX_SIZE){
         return;
     }
@@ -157,89 +168,108 @@ void centralizedArray(double *array ,int numArgs) {
     double copy[LINE_MAX_SIZE];
     copy_arr(array,copy,LINE_MAX_SIZE);
     for (int i=0;i<LINE_MAX_SIZE;i++){
-        if(i<floor(zeros/2))array[i]=0;
-        if((i>=floor(zeros/2))&&(i<floor(zeros/2)+numArgs)){
+        if(i<floor(zeros/2)){array[i]=0;}
+        if((i>=floor(zeros/2))&&(i<=floor(zeros/2)+numArgs)){
             array[i]=copy[i-(int)floor(zeros/2)];
         }
-
     }
     normArray(array);
-
 }
 
 int phi(int t ,int len){
-    return t+floor(len/2);
+    /*
+     * make an aphinic transformation
+     */
+    return t+(int)floor(len/2);
 }
 
-double convoltionArg(double *h, double * g, int cord , int lenh,int leng){
-    int start=-ceil(leng/2);
-    int end=floor(leng/2);
+double convoltionArg(double *g, double * h, int cord , int lenh,int leng){
+    /*
+     * compute a convolution arg
+     */
+    int start=-(int)ceil(leng/2);
+    int end=(int)floor(leng/2);
     double sum=0;
     for (start;start<end;start++){
-        if (!(phi(cord-start,lenh)<=0 || phi(start,leng)<=0 ||phi(cord-start,lenh)>=lenh||phi(start,leng)>=leng)){
-            sum+=h[phi(cord-start,lenh)]*g[phi(start,leng)];
+        if (!(phi(cord-start,lenh)<0 || phi(start,leng)<0 ||phi(cord-start,lenh)>lenh||phi(start,leng)>leng)){
+            sum+=g[phi(cord-start,lenh)]*h[phi(start,leng)];
         }
     }
     return sum;
 }
 
-int convoltion(double *h, double *g, double *output,int lenh,int leng ){
-    int start=-ceil(lenh/2)-1;
-    int end=floor(lenh/2)-1;
-    for (int i=0;start<end;start++){
-        output[i]=convoltionArg(h,g,start,lenh,leng);
-        i++;
+void convolution(double *g, double *h, double *output, int lenh, int leng){
+    /*
+     * do a single convolution
+     */
+    int start=-(int)ceil(lenh/2)-1;
+    int end=(int)floor(lenh/2)-1;
+    for (int i=0;start<end;i++){
+        output[i]=convoltionArg(g,h,start,lenh,leng);
+        start++;
     }
 }
 
 
-//double conArg(double* h,double* g,int cord){
-//    double sum=0;
-//    for (int i=0;i<=cord;i++){
-//        sum+=h[i]*g[cord-i];
-//    }
-//    return sum;
-//}
-//
-//
-//void conv(double* h, double* g,double* output){
-//    for (int i=0;i<LINE_MAX_SIZE;i++){
-//        output[i]=conArg(h,g,i);
-//    }
-//}
+
 double findMax(double * array ,int len){
+    /*
+     * find he maximal arg in the list while rounding the args
+     */
     double output=0;
     for (int i=0 ;i<len ;i++){
-        if (array[i]>output);
-        output=array[i];
+        array[i]=round(roundFator*array[i])/roundFator;
+        if (array[i]>output){
+            output=array[i];
+        }
     }
     return output;
 }
 
-//double getStars(double max ,double arg){
-//    double s =arg/max;
-//    return floor(s);
-//}
+int lencheack(double len1,double len2){
+    /*
+     * check legal input
+     */
+    if(len2<0){
+        return -1;
+    }
+    if(len1<len2){
+        return -1;
+    }
+    return 1;
+}
 
+void printOut(double* g){
+    /*
+     * print out the convolution vector after rounding
+     */
+    double star=0;
+    double max=findMax(g,LINE_MAX_SIZE);
+    if(max< epsilon){
+        return ;
+    }
+    for (int i = 0; i < 100; i++) {
+        star=floor((g[i] / max) *maxStars );
+        printf("%0.3f: ", g[i]);
+        for (int j=0;j<star;j++){
+            printf("*");
+        }
+        printf("\n");
+    }
 
-//double  rou(double arg){
-//    return round(arg*1000)/1000;
-//}
+}
+
 
 int main(int argc, const char *argv[]) {
     double h[LINE_MAX_SIZE] = {0};
     double g[LINE_MAX_SIZE] = {0};
-    double len1 = parseLine(h);
+    double len1 = parseLine(g);
     if(len1<0){
         fprintf(stdout, "%s", errorm);
         return EXIT_FAILURE;
     }
-    double len2 = parseLine(g);
-    if(len2<0){
-        fprintf(stdout, "%s", errorm);
-        return EXIT_FAILURE;
-    }
-    if(len1<len2){
+    double len2 = parseLine(h);
+    if (lencheack(len1,len2)<0){
         fprintf(stdout, "%s", errorm);
         return EXIT_FAILURE;
     }
@@ -248,17 +278,13 @@ int main(int argc, const char *argv[]) {
         fprintf(stdout, "%s", errorm);
         return EXIT_FAILURE;
     }
-    centralizedArray(h,len1);
-    centralizedArray(g,len2);
-    double output[LINE_MAX_SIZE]={0};
+    centralizedArray(g,len1);
+    centralizedArray(h,len2);
     for (int i=0;i<rooms;i++){
-        convoltion(g,h,output,LINE_MAX_SIZE,LINE_MAX_SIZE);
-        centralizedArray(output,LINE_MAX_SIZE);
-//        copy_arr(output,g,LINE_MAX_SIZE);
-    }
-//    double max=findMax(output,LINE_MAX_SIZE);
-    for (int i = 0; i < 100; i++) {
-        printf("%0.3f\n", output[i]);
-    }
-
+        double output[LINE_MAX_SIZE]={0};
+        convolution(g, h, output, LINE_MAX_SIZE, LINE_MAX_SIZE);
+        normArray(output);
+        copy_arr(output,g,LINE_MAX_SIZE);
+        }
+    printOut(g);
 }
